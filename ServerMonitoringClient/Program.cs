@@ -28,12 +28,11 @@ namespace ServerMonitoringClient_ForWindows
             while (true)
             {
                 WriteLine($"[{DateTime.Now}] Monitoring Start");
-
-                var key = $"APIServer_{DateTime.Now.ToString("yyyyMMdd")}";
+                
+                var key = $"{ConfigurationManager.AppSettings["MonitoringServerName"]}_{DateTime.Now.ToString("yyyyMMdd")}";
                 var redisPostStr = string.Empty;
                 var monitoringTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
                 var monitoringCpu = bool.Parse(ConfigurationManager.AppSettings["MonitorCpu"]);
-
 
                 if (monitoringCpu)
                 {
