@@ -23,6 +23,7 @@ namespace ServerMonitoringClient_ForWindows
             var redis = ConnectionMultiplexer.Connect(redisServer + ",allowAdmin=true");
             var redisDb = redis.GetDatabase();
             var monitoringCycle = int.Parse(ConfigurationManager.AppSettings["MonitoringCycle"]) * 1000;
+            var redisTTLDay = int.Parse(ConfigurationManager.AppSettings["MonitoringSaveDay"]);
 
             while (true)
             {
@@ -31,8 +32,8 @@ namespace ServerMonitoringClient_ForWindows
                 var key = $"APIServer_{DateTime.Now.ToString("yyyyMMdd")}";
                 var redisPostStr = string.Empty;
                 var monitoringTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-
                 var monitoringCpu = bool.Parse(ConfigurationManager.AppSettings["MonitorCpu"]);
+
 
                 if (monitoringCpu)
                 {
@@ -60,7 +61,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             monitoringCpuDateModel.CpuList.Add(monitoringCpuModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringCpuDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringCpuDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -68,7 +69,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             preMonitoringCpuDateModel.CpuList.Add(monitoringCpuModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringCpuDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringCpuDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                     }
                     catch
@@ -111,14 +112,14 @@ namespace ServerMonitoringClient_ForWindows
 
                         if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
-                            MonitoringMemoryDateModel monitoringMemDateModel = new MonitoringMemoryDateModel
+                            var monitoringMemDateModel = new MonitoringMemoryDateModel
                             {
                                 Date = DateTime.Now.ToString("yyyy-MM-dd"),
                                 MemList = new List<MonitoringMemoryModel>()
                             };
                             monitoringMemDateModel.MemList.Add(monitoringMemModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringMemDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringMemDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -126,7 +127,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             preMonitoringMemoryDateModel.MemList.Add(monitoringMemModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringMemoryDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringMemoryDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                     }
                     catch
@@ -165,7 +166,7 @@ namespace ServerMonitoringClient_ForWindows
                                 monitoringDiskDateModel.DiskList.Add(monitoringDiskModel);
                             }
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringDiskDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringDiskDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -185,7 +186,7 @@ namespace ServerMonitoringClient_ForWindows
                                 preMonitoringDiskDateModel.DiskList.Add(monitoringDiskModel);
                             }
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringDiskDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringDiskDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                     }
                     catch
@@ -251,7 +252,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             monitoringWebModel.IisList.Add(monitoringIisModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -259,7 +260,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             preMonitoringWebDateModel.IisList.Add(monitoringIisModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
 
                         redisPostStr = "_WAS";
@@ -282,7 +283,7 @@ namespace ServerMonitoringClient_ForWindows
 
                                 monitoringWebModel.WasList.Add(monitoringWasModel);
 
-                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
+                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel), TimeSpan.FromDays(redisTTLDay));
                             }
                             else
                             {
@@ -290,7 +291,7 @@ namespace ServerMonitoringClient_ForWindows
 
                                 preMonitoringWebDateModel.WasList.Add(monitoringWasModel);
 
-                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
+                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel), TimeSpan.FromDays(redisTTLDay));
                             }
                         }
                         catch
@@ -318,7 +319,7 @@ namespace ServerMonitoringClient_ForWindows
                             };
                             monitoringWebModel.AppPoolList.Add(monitoringApplicationPoolModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -326,7 +327,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             preMonitoringWebDateModel.AppPoolList.Add(monitoringApplicationPoolModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
 
                     }
@@ -353,6 +354,7 @@ namespace ServerMonitoringClient_ForWindows
                         var sqlTotalServerMemory = new PerformanceCounter("SQLServer:Memory Manager", "Total Server Memory (KB)");
                         var sqlBatchRequestsPerSec = new PerformanceCounter("SQLServer:SQL Statistics", "Batch Requests/sec");
 
+                        //첫 데이터 안나오는 경우 있음.
                         sqlFullScansPerSec.NextValue();
                         sqlPageSplitsPerSec.NextValue();
                         sqlBufferCacheHitRatio.NextValue();
@@ -386,7 +388,7 @@ namespace ServerMonitoringClient_ForWindows
                             };
                             monitoringSqlDateModel.SqlList.Add(monitoringSqlModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringSqlDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringSqlDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
                         else
                         {
@@ -394,7 +396,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             preMonitoringSqlDateModel.SqlList.Add(monitoringSqlModel);
 
-                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringSqlDateModel));
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringSqlDateModel), TimeSpan.FromDays(redisTTLDay));
                         }
 
                     }
