@@ -9,6 +9,7 @@ using StackExchange.Redis;
 using static System.Console;
 using System.Configuration;
 using ServerMonitoringClient.Model;
+using Newtonsoft.Json;
 
 namespace ServerMonitoringClient_ForWindows
 {
@@ -20,11 +21,13 @@ namespace ServerMonitoringClient_ForWindows
         {
             var allDrives = DriveInfo.GetDrives();
             var redis = ConnectionMultiplexer.Connect(redisServer + ",allowAdmin=true");
-            var db = redis.GetDatabase();
+            var redisDb = redis.GetDatabase();
             var monitoringCycle = int.Parse(ConfigurationManager.AppSettings["MonitoringCycle"]) * 1000;
 
             while (true)
             {
+                WriteLine($"[{DateTime.Now}] Monitoring Start");
+
                 var key = $"APIServer_{DateTime.Now.ToString("yyyyMMdd")}";
                 var redisPostStr = string.Empty;
                 var monitoringTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
@@ -47,21 +50,25 @@ namespace ServerMonitoringClient_ForWindows
                             ProcessTime = (int)cpu.NextValue()
                         };
 
-                        //redis 키 읽기
-                        if (true)
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
-                            MonitoringCpuDateModel monitoringCpuDateModel = new MonitoringCpuDateModel
+                            var monitoringCpuDateModel = new MonitoringCpuDateModel
                             {
                                 Date = DateTime.Now.ToString("yyyy-MM-dd"),
                                 CpuList = new List<MonitoringCpuModel>()
                             };
 
                             monitoringCpuDateModel.CpuList.Add(monitoringCpuModel);
-                            //bucket.Insert<MonitoringCpuDateModel>(key + redisPostStr, monitoringCpuDateModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringCpuDateModel));
                         }
                         else
                         {
-                            //bucket.MutateIn<MonitoringCpuDateModel>(key + redisPostStr).ArrayAppend("cpuList", monitoringCpuModel).Execute();
+                            var preMonitoringCpuDateModel = JsonConvert.DeserializeObject<MonitoringCpuDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                            preMonitoringCpuDateModel.CpuList.Add(monitoringCpuModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringCpuDateModel));
                         }
                     }
                     catch
@@ -101,8 +108,8 @@ namespace ServerMonitoringClient_ForWindows
                         };
 
                         Thread.Sleep(2000);
-                        //if (!bucket.Exists(Key + PostStr))
-                        if (true)
+
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
                             MonitoringMemoryDateModel monitoringMemDateModel = new MonitoringMemoryDateModel
                             {
@@ -110,11 +117,16 @@ namespace ServerMonitoringClient_ForWindows
                                 MemList = new List<MonitoringMemoryModel>()
                             };
                             monitoringMemDateModel.MemList.Add(monitoringMemModel);
-                            //bucket.Insert<MonitoringMemoryDateModel>(Key + PostStr, monitoringMemDateModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringMemDateModel));
                         }
                         else
                         {
-                            //bucket.MutateIn<MonitoringMemoryDateModel>(Key + PostStr).ArrayAppend("memList", monitoringMemModel).Execute();
+                            var preMonitoringMemoryDateModel = JsonConvert.DeserializeObject<MonitoringMemoryDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                            preMonitoringMemoryDateModel.MemList.Add(monitoringMemModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringMemoryDateModel));
                         }
                     }
                     catch
@@ -131,10 +143,9 @@ namespace ServerMonitoringClient_ForWindows
                     {
                         redisPostStr = "_DISK";
 
-                        //redis 키 읽기
-                        if (true)
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
-                            var monitoringHddDateModel = new MonitoringDiskDateModel
+                            var monitoringDiskDateModel = new MonitoringDiskDateModel
                             {
                                 Date = DateTime.Now.ToString("yyyy-MM-dd"),
                                 DiskList = new List<MonitoringDiskModel>()
@@ -142,7 +153,7 @@ namespace ServerMonitoringClient_ForWindows
 
                             foreach (var d in allDrives.Where(drive => drive.IsReady && drive.DriveType == DriveType.Fixed))
                             {
-                                var monitoringHddModel = new MonitoringDiskModel
+                                var monitoringDiskModel = new MonitoringDiskModel
                                 {
                                     Time = monitoringTime,
                                     Drive = d.Name.Substring(0, 1),
@@ -151,16 +162,18 @@ namespace ServerMonitoringClient_ForWindows
                                     TotalSize = d.TotalSize / 1024 / 1024 / 1024
                                 };
 
-                                monitoringHddDateModel.DiskList.Add(monitoringHddModel);
+                                monitoringDiskDateModel.DiskList.Add(monitoringDiskModel);
                             }
 
-                            //bucket.Insert<MonitoringHddDateModel>(Key + PostStr, monitoringHddDateModel);
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringDiskDateModel));
                         }
                         else
                         {
+                            var preMonitoringDiskDateModel = JsonConvert.DeserializeObject<MonitoringDiskDateModel>(redisDb.StringGet(key + redisPostStr));
+
                             foreach (var d in allDrives.Where(drive => drive.IsReady && drive.DriveType == DriveType.Fixed))
                             {
-                                var monitoringHddModel = new MonitoringDiskModel
+                                var monitoringDiskModel = new MonitoringDiskModel
                                 {
                                     Time = monitoringTime,
                                     Drive = d.Name.Substring(0, 1),
@@ -169,8 +182,10 @@ namespace ServerMonitoringClient_ForWindows
                                     TotalSize = d.TotalSize / 1024 / 1024 / 1024
                                 };
 
-                                //bucket.MutateIn<MonitoringHddDateModel>(Key + PostStr).ArrayAppend("hddList", monitoringHddModel).Execute();
+                                preMonitoringDiskDateModel.DiskList.Add(monitoringDiskModel);
                             }
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringDiskDateModel));
                         }
                     }
                     catch
@@ -226,8 +241,7 @@ namespace ServerMonitoringClient_ForWindows
                             PostRequestCountPerSec = iisPostRequestsPerSec.NextValue()
                         };
 
-                        //if (!bucket.Exists(Key + PostStr))
-                        if (true)
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
                             var monitoringWebModel = new MonitoringWebDateModel
                             {
@@ -236,25 +250,29 @@ namespace ServerMonitoringClient_ForWindows
                             };
 
                             monitoringWebModel.IisList.Add(monitoringIisModel);
-                            //bucket.Insert<MonitoringWebModel>(Key + PostStr, monitoringWebModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
                         }
                         else
                         {
-                            //bucket.MutateIn<MonitoringWebModel>(Key + PostStr).ArrayAppend("iisList", monitoringIisModel).Execute();
+                            var preMonitoringWebDateModel = JsonConvert.DeserializeObject<MonitoringWebDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                            preMonitoringWebDateModel.IisList.Add(monitoringIisModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
                         }
 
                         redisPostStr = "_WAS";
                         try
                         {
-                            var monitoringwasModel = new MonitoringWasModel
+                            var monitoringWasModel = new MonitoringWasModel
                             {
                                 Time = monitoringTime,
                                 LatencyHealthPing = wasHealthPingReplyLatency.NextValue()
 
                             };
 
-                            //if (!bucket.Exists(Key + PostStr))
-                            if (true)
+                            if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                             {
                                 var monitoringWebModel = new MonitoringWebDateModel
                                 {
@@ -262,12 +280,17 @@ namespace ServerMonitoringClient_ForWindows
                                     WasList = new List<MonitoringWasModel>()
                                 };
 
-                                monitoringWebModel.WasList.Add(monitoringwasModel);
-                                //bucket.Insert<MonitoringWebModel>(Key + PostStr, monitoringWebModel);
+                                monitoringWebModel.WasList.Add(monitoringWasModel);
+
+                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
                             }
                             else
                             {
-                                //bucket.MutateIn<MonitoringWebModel>(Key + PostStr).ArrayAppend("wasList", monitoringwasModel).Execute();
+                                var preMonitoringWebDateModel = JsonConvert.DeserializeObject<MonitoringWebDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                                preMonitoringWebDateModel.WasList.Add(monitoringWasModel);
+
+                                redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
                             }
                         }
                         catch
@@ -286,8 +309,7 @@ namespace ServerMonitoringClient_ForWindows
 
                         };
 
-                        //if (!bucket.Exists(Key + PostStr))
-                        if (true)
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
                             var monitoringWebModel = new MonitoringWebDateModel
                             {
@@ -295,11 +317,16 @@ namespace ServerMonitoringClient_ForWindows
                                 AppPoolList = new List<MonitoringAppPoolModel>()
                             };
                             monitoringWebModel.AppPoolList.Add(monitoringApplicationPoolModel);
-                            //bucket.Insert<MonitoringWebModel>(Key + PostStr, monitoringWebModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringWebModel));
                         }
                         else
                         {
-                            //bucket.MutateIn<MonitoringWebModel>(Key + PostStr).ArrayAppend("applicationPoolList", monitoringApplicationPoolModel).Execute();
+                            var preMonitoringWebDateModel = JsonConvert.DeserializeObject<MonitoringWebDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                            preMonitoringWebDateModel.AppPoolList.Add(monitoringApplicationPoolModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringWebDateModel));
                         }
 
                     }
@@ -350,8 +377,7 @@ namespace ServerMonitoringClient_ForWindows
                             BatchRequestsPerSec = (int)sqlBatchRequestsPerSec.NextValue(),
                         };
 
-                        //if (!bucket.Exists(Key + PostStr))
-                        if (true)
+                        if (string.IsNullOrEmpty(redisDb.StringGet(key + redisPostStr)))
                         {
                             var monitoringSqlDateModel = new MonitoringSqlDateModel
                             {
@@ -359,11 +385,16 @@ namespace ServerMonitoringClient_ForWindows
                                 SqlList = new List<MonitoringSqlModel>()
                             };
                             monitoringSqlDateModel.SqlList.Add(monitoringSqlModel);
-                            //bucket.Insert<MonitoringSqlDateModel>(Key + PostStr, monitoringSqlDateModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(monitoringSqlDateModel));
                         }
                         else
                         {
-                            //bucket.MutateIn<MonitoringSqlDateModel>(Key + PostStr).ArrayAppend("sqlList", monitoringSqlModel).Execute();
+                            var preMonitoringSqlDateModel = JsonConvert.DeserializeObject<MonitoringSqlDateModel>(redisDb.StringGet(key + redisPostStr));
+
+                            preMonitoringSqlDateModel.SqlList.Add(monitoringSqlModel);
+
+                            redisDb.StringSet(key + redisPostStr, JsonConvert.SerializeObject(preMonitoringSqlDateModel));
                         }
 
                     }
@@ -373,6 +404,7 @@ namespace ServerMonitoringClient_ForWindows
                     }
                 }
 
+                WriteLine($"[{DateTime.Now}] Monitoring End - Will Restart {monitoringCycle} ms");
                 Thread.Sleep(monitoringCycle);
             }
             
