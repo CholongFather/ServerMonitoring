@@ -1,27 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace ServerMonitoringClient.Model
 {
-	public class MonitoringCpuDateModel
-	{
-		public string Date { get; set; }
-		public List<MonitoringCpuModel> CpuList { get; set; }
-	}
-
 	public class MonitoringCpuModel
 	{
 		public string Time { get; set; }
 		public int ProcessTime { get; set; }
-	}
-
-	public class MonitoringMemoryDateModel
-	{
-		public string Date { get; set; }
-		public List<MonitoringMemoryModel> MemList { get; set; }
 	}
 
 	public class MonitoringMemoryModel
@@ -31,12 +15,6 @@ namespace ServerMonitoringClient.Model
 		public double AvailableBytes { get; set; }
 	}
 
-	public class MonitoringDiskDateModel
-	{
-		public string Date { get; set; }
-		public List<MonitoringDiskModel> DiskList { get; set; }
-	}
-
 	public class MonitoringDiskModel
 	{
 		public string Time { get; set; }
@@ -44,14 +22,6 @@ namespace ServerMonitoringClient.Model
 		public double TotalFreeSpace { get; set; }
 		public double TotalUsedSpace { get; set; }
 		public double TotalSize { get; set; }
-	}
-
-	public class MonitoringWebDateModel
-	{
-		public string Date { get; set; }
-		public List<MonitoringIisModel> IisList { get; set; }
-		public List<MonitoringWasModel> WasList { get; set; }
-		public List<MonitoringAppPoolModel> AppPoolList { get; set; }
 	}
 
 	public class MonitoringIisModel
@@ -77,12 +47,6 @@ namespace ServerMonitoringClient.Model
 		public double CurrenttApplicationPoolState { get; set; }
 		public double TotalApplicationPoolRecycles { get; set; }
 		public double WorkerProcessCreated { get; set; }
-	}
-
-	public class MonitoringSqlDateModel
-	{
-		public string Date { get; set; }
-		public List<MonitoringSqlModel> SqlList { get; set; }
 	}
 
 	public class MonitoringSqlModel
